@@ -22,7 +22,7 @@ export default function BillColumn({
   const payments = order?.payments || []
   const isEmpty = items.length === 0
 
-  // Masa degisince secim/tutar sifirlansin
+  
   useEffect(() => {
     setSelectedUnits(new Set())
     setManualAmount('')
