@@ -4,13 +4,7 @@ import { orderTotals } from '../lib/orders'
 
 const PAYMENT_LABEL = { item: 'Ürün ödemesi', manual: 'Serbest ödeme', all: 'Tümü ödendi' }
 
-/**
- * SAG SUTUN - Canli Hesap & Adisyon Paneli
- *  - Her urun ADEDI ayri satirdir. Odenen birim "✓ Ödendi" olarak kilitlenir,
- *    tekrar secilemez; kalan birimler secilebilir.
- *  - Secilen birimlerin toplami otomatik "hesaptan dus" tutari olur.
- *  - Alternatif olarak elle serbest tutar da girilebilir (kalani asamaz).
- */
+
 export default function BillColumn({
   table,
   order,
