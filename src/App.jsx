@@ -17,6 +17,7 @@ import MenuColumn from './components/MenuColumn'
 import TablesColumn from './components/TablesColumn'
 import BillColumn from './components/BillColumn'
 import Login from './components/Login'
+import Dashboard from './components/Dashboard'
 
 const STORAGE_ORDERS = 'italizzo.orders.v1'
 const STORAGE_ACTIVE = 'italizzo.activeTable.v1'
@@ -27,6 +28,7 @@ export default function App() {
   const [orders, setOrders] = useLocalStorage(STORAGE_ORDERS, {})
   const [activeTableId, setActiveTableId] = useLocalStorage(STORAGE_ACTIVE, TABLES[0].id)
   const [mobileView, setMobileView] = useState('tables')
+  const [view, setView] = useState('pos') // 'pos' | 'dashboard'
 
   // Menu MongoDB'den yuklenir (backend yoksa yedege duser)
   const [menu, setMenu] = useState([])
@@ -110,7 +112,10 @@ export default function App() {
       const existing = order.items.find((i) => i.id === item.id)
       const items = existing
         ? order.items.map((i) => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i))
-        : [...order.items, { id: item.id, name: item.name, price: item.price, qty: 1, paidQty: 0 }]
+        : [
+            ...order.items,
+            { id: item.id, name: item.name, price: item.price, category: item.category, qty: 1, paidQty: 0 },
+          ]
       return { ...order, items }
     })
   }
@@ -271,6 +276,9 @@ export default function App() {
   // --- Giris yapilmadiysa login ekrani ---
   if (!auth) return <Login onLogin={setAuth} />
 
+  // --- Satis panosu (tam sayfa) ---
+  if (view === 'dashboard') return <Dashboard onBack={() => setView('pos')} />
+
   const menuEl = (
     <MenuColumn
       menu={menu}
@@ -299,7 +307,11 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <Header openTables={openTables} onLogout={handleLogout} />
+      <Header
+        openTables={openTables}
+        onLogout={handleLogout}
+        onOpenDashboard={() => setView('dashboard')}
+      />
 
       {/* Mobil/tablet panel gecis kontrolu */}
       <nav className="flex gap-1.5 border-b border-cream-200 bg-cream-50/80 px-3 py-2 lg:hidden">

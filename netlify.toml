@@ -10,10 +10,6 @@
   node_bundler = "esbuild"
   external_node_modules = ["mongodb"]
 
-# Zamanlanmis fonksiyon: her gun 21:00 Turkiye (18:00 UTC) gunluk rapor e-postasi
-[functions."daily-report"]
-  schedule = "0 18 * * *"
-
 # /api/* isteklerini serverless fonksiyonlara yonlendir
 # ornek: /api/menu -> /.netlify/functions/menu
 [[redirects]]

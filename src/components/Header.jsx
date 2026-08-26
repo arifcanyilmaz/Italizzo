@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-/** Ust bar: marka kimligi + canli saat + acik masa ozeti + cikis */
-export default function Header({ openTables, onLogout }) {
+/** Ust bar: marka kimligi + canli saat + acik masa ozeti + dashboard + cikis */
+export default function Header({ openTables, onLogout, onOpenDashboard }) {
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -47,6 +47,18 @@ export default function Header({ openTables, onLogout }) {
           </span>
           <span className="text-xs font-semibold text-charcoal-600">açık masa</span>
         </div>
+
+        {onOpenDashboard && (
+          <button
+            type="button"
+            onClick={onOpenDashboard}
+            className="flex items-center gap-1.5 rounded-full border border-olive-300/60 bg-white/70 px-3 py-1.5 text-sm font-bold text-olive-700 shadow-soft transition-colors hover:bg-olive-50"
+            title="Satış panosu"
+          >
+            <span className="text-base">📊</span>
+            <span className="hidden sm:inline">Dashboard</span>
+          </button>
+        )}
 
         {onLogout && (
           <button

@@ -34,7 +34,10 @@ function sanitizeItem(i) {
   }
   // Odenen adet (0..qty) — hangi birimlerin odendigini/kilitlendigini tutar
   const paidQty = Math.max(0, Math.min(qty, Math.floor(Number(i.paidQty) || 0)))
-  return { id, name, price, qty, paidQty }
+  const out = { id, name, price, qty, paidQty }
+  // Kategori (dashboard'da urun/icecek ayrimi icin) — varsa sakla
+  if (i.category) out.category = String(i.category)
+  return out
 }
 
 const PAYMENT_TYPES = ['item', 'manual', 'all']

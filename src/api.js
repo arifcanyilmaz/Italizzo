@@ -89,6 +89,21 @@ export async function closeOrder(tableId) {
   return res.json().catch(() => ({}))
 }
 
+// -------------------------------------------------------------- Dashboard ----
+
+/** Satis panosu verisi (son `days` gun). Backend yoksa { ok:false } doner. */
+export async function fetchDashboard(days = 30) {
+  try {
+    const res = await fetch(`/api/dashboard?days=${days}`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return { ok: true, data: await res.json() }
+  } catch (err) {
+    return { ok: false, error: err.message }
+  }
+}
+
 // ----------------------------------------------------------------- Login ----
 
 /**
