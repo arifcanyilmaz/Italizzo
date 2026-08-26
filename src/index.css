@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: #2b2724;
+  /* Sicak krem arka plan + hafif trattoria dokusu */
+  background-color: #fbf7ef;
+  background-image:
+    radial-gradient(at 12% 8%, rgba(188, 78, 50, 0.06) 0px, transparent 55%),
+    radial-gradient(at 88% 4%, rgba(111, 126, 60, 0.07) 0px, transparent 50%),
+    radial-gradient(at 78% 96%, rgba(188, 78, 50, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ince, temayla uyumlu kaydirma cubuklari */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d9c9ab transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #d9c9ab;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #c9b48c;
+}
+
+/* Sayilarin okey siralanmasi icin */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sayfayi disaridan secilemez yapmadan, POS his icin kart secimini kapat */
+button {
+  -webkit-tap-highlight-color: transparent;
+}

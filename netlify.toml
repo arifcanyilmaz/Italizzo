@@ -1,0 +1,28 @@
+# Netlify yapilandirmasi — frontend (Vite) + backend (Functions) ayni sitede.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  # MongoDB surucusunu fonksiyon paketine dahil et
+  node_bundler = "esbuild"
+  external_node_modules = ["mongodb"]
+
+# Zamanlanmis fonksiyon: her gun 21:00 Turkiye (18:00 UTC) gunluk rapor e-postasi
+[functions."daily-report"]
+  schedule = "0 18 * * *"
+
+# /api/* isteklerini serverless fonksiyonlara yonlendir
+# ornek: /api/menu -> /.netlify/functions/menu
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA: bilinmeyen tum yollar index.html'e (client-side routing icin)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

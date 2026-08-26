@@ -1,0 +1,458 @@
+import { useEffect, useMemo, useState } from 'react'
+import { formatTL, formatTime, parseAmount } from '../lib/format'
+import { orderTotals } from '../lib/orders'
+
+const PAYMENT_LABEL = { item: 'Ürün ödemesi', manual: 'Serbest ödeme', all: 'Tümü ödendi' }
+
+/**
+ * SAG SUTUN - Canli Hesap & Adisyon Paneli
+ *  - Her urun ADEDI ayri satirdir. Odenen birim "✓ Ödendi" olarak kilitlenir,
+ *    tekrar secilemez; kalan birimler secilebilir.
+ *  - Secilen birimlerin toplami otomatik "hesaptan dus" tutari olur.
+ *  - Alternatif olarak elle serbest tutar da girilebilir (kalani asamaz).
+ */
+export default function BillColumn({
+  table,
+  order,
+  onChangeQty,
+  onAddPayment,
+  onRemovePayment,
+  onClearTable,
+}) {
+  const [manualAmount, setManualAmount] = useState('')
+  const [selectedUnits, setSelectedUnits] = useState(() => new Set())
+  const [confirmClear, setConfirmClear] = useState(false)
+
+  const { subtotal, paid, remaining, itemCount } = orderTotals(order)
+  const items = order?.items || []
+  const payments = order?.payments || []
+  const isEmpty = items.length === 0
+
+  // Masa degisince secim/tutar sifirlansin
+  useEffect(() => {
+    setSelectedUnits(new Set())
+    setManualAmount('')
+    setConfirmClear(false)
+  }, [table.id])
+
+  // Urunler degisince (adet/odenen) gecersiz secim anahtarlarini temizle
+  const itemsSig = items.map((i) => `${i.id}:${i.qty}:${i.paidQty || 0}`).join('|')
+  useEffect(() => {
+    setSelectedUnits((prev) => {
+      let changed = false
+      const next = new Set()
+      for (const key of prev) {
+        const [id, posStr] = key.split('#')
+        const pos = Number(posStr)
+        const it = items.find((i) => i.id === id)
+        if (it && pos >= (it.paidQty || 0) && pos < it.qty) next.add(key)
+        else changed = true
+      }
+      return changed ? next : prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsSig])
+
+  // Secili birimlerin toplami
+  const selectedValue = useMemo(() => {
+    let sum = 0
+    for (const key of selectedUnits) {
+      const id = key.split('#')[0]
+      const it = items.find((i) => i.id === id)
+      if (it) sum += it.price
+    }
+    return sum
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUnits, itemsSig])
+
+  const hasSelection = selectedUnits.size > 0
+  const manualValue = parseAmount(manualAmount)
+  const amountToPay = hasSelection ? selectedValue : Math.min(manualValue, remaining)
+  const canPay = amountToPay > 0 && remaining > 0
+
+  const toggleUnit = (itemId, pos, price) => {
+    const key = `${itemId}#${pos}`
+    setSelectedUnits((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+        return next
+      }
+      // Secim, kalan bakiyeyi asamaz
+      if (selectedValue + price > remaining + 0.001) return prev
+      next.add(key)
+      return next
+    })
+  }
+
+  const submitPayment = (e) => {
+    e?.preventDefault()
+    if (!canPay) return
+    if (hasSelection) {
+      const paidCounts = {}
+      let amount = 0
+      for (const key of selectedUnits) {
+        const id = key.split('#')[0]
+        const it = items.find((i) => i.id === id)
+        if (!it) continue
+        paidCounts[id] = (paidCounts[id] || 0) + 1
+        amount += it.price
+      }
+      if (amount <= 0) return
+      onAddPayment({ type: 'item', amount, paidCounts })
+      setSelectedUnits(new Set())
+    } else {
+      onAddPayment({ type: 'manual', amount: amountToPay })
+      setManualAmount('')
+    }
+  }
+
+  const payAll = () => {
+    if (remaining <= 0) return
+    onAddPayment({ type: 'all' })
+    setSelectedUnits(new Set())
+    setManualAmount('')
+  }
+
+  const handleClear = () => {
+    if (isEmpty) return
+    setConfirmClear(true)
+  }
+
+  const confirmClearTable = () => {
+    setSelectedUnits(new Set())
+    setManualAmount('')
+    setConfirmClear(false)
+    onClearTable()
+  }
+
+  // Urunleri birim birim satirlara ac
+  const unitRows = items.flatMap((item) => {
+    const paidQty = item.paidQty || 0
+    return Array.from({ length: item.qty }, (_, pos) => ({
+      key: `${item.id}#${pos}`,
+      item,
+      pos,
+      paid: pos < paidQty,
+    }))
+  })
+
+  return (
+    <section className="flex h-full flex-col overflow-hidden rounded-3xl border border-cream-200 bg-white/80 shadow-card">
+      {/* Baslik */}
+      <div className="flex items-center justify-between gap-3 border-b border-cream-200 bg-charcoal-800 px-5 py-4 text-cream-50">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cream-200/80">
+            Adisyon · {table.zone}
+          </p>
+          <h2 className="font-serif text-2xl font-bold">{table.name}</h2>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] uppercase tracking-wider text-cream-200/70">Toplam</p>
+          <p className="font-serif text-2xl font-bold tabular-nums">{formatTL(subtotal)}</p>
+        </div>
+      </div>
+
+      {/* Birim satirlari */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {isEmpty ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 py-10 text-center">
+            <span className="text-5xl opacity-70">🧾</span>
+            <p className="font-serif text-lg font-semibold text-charcoal-700">Adisyon boş</p>
+            <p className="max-w-[220px] text-sm text-charcoal-600">
+              Soldaki menüden ürün ekleyerek <strong>{table.name}</strong> için hesabı başlatın.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="mb-2 px-1 text-[11px] font-semibold text-charcoal-500">
+              Ödenen adedi ✓ ile işaretleyin — tutar aşağıda toplanır.
+            </p>
+            <ul className="space-y-1.5">
+              {unitRows.map(({ key, item, pos, paid: isPaid }) => {
+                const selected = selectedUnits.has(key)
+                const disabledAdd =
+                  !selected && (remaining <= 0 || selectedValue + item.price > remaining + 0.001)
+                return (
+                  <li
+                    key={key}
+                    className={[
+                      'flex items-center gap-2.5 rounded-xl border p-2.5 transition-colors',
+                      isPaid
+                        ? 'border-olive-100 bg-olive-50/70'
+                        : selected
+                          ? 'border-olive-400 bg-olive-50'
+                          : 'border-cream-200 bg-cream-50/70',
+                    ].join(' ')}
+                  >
+                    {isPaid ? (
+                      <span
+                        className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-olive-500 text-sm font-bold text-cream-50"
+                        title="Ödendi"
+                      >
+                        ✓
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleUnit(item.id, pos, item.price)}
+                        disabled={disabledAdd}
+                        className={[
+                          'grid h-6 w-6 shrink-0 place-items-center rounded-lg border-2 text-sm font-bold transition-all',
+                          selected
+                            ? 'border-olive-500 bg-olive-500 text-cream-50'
+                            : 'border-cream-300 bg-white text-transparent hover:border-olive-400',
+                          disabledAdd ? 'cursor-not-allowed opacity-40' : '',
+                        ].join(' ')}
+                        aria-pressed={selected}
+                        aria-label={selected ? 'Seçimi kaldır' : 'Ödeme için seç'}
+                      >
+                        ✓
+                      </button>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={[
+                          'truncate font-serif text-[15px] font-semibold',
+                          isPaid ? 'text-charcoal-500 line-through' : 'text-charcoal-800',
+                        ].join(' ')}
+                      >
+                        {item.name}
+                      </p>
+                    </div>
+
+                    <span
+                      className={[
+                        'shrink-0 text-sm font-bold tabular-nums',
+                        isPaid ? 'text-olive-600' : 'text-terracotta-600',
+                      ].join(' ')}
+                    >
+                      {formatTL(item.price)}
+                    </span>
+
+                    {isPaid ? (
+                      <span className="shrink-0 rounded-full bg-olive-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-olive-700">
+                        Ödendi
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onChangeQty(item.id, -1)}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-charcoal-500 transition-colors hover:bg-terracotta-50 hover:text-terracotta-600"
+                        aria-label="Bu adedi sil"
+                        title="Bu adedi sil"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+
+        {/* Odeme gecmisi */}
+        {payments.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-olive-100 bg-olive-50/60 p-3">
+            <p className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-olive-700">
+              Alınan Ödemeler ({payments.length})
+            </p>
+            <ul className="space-y-1">
+              {payments.map((p, idx) => (
+                <li key={idx} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="flex items-center gap-1.5 text-charcoal-700">
+                    <span>💰</span>
+                    <span className="font-semibold">{PAYMENT_LABEL[p.type] || 'Ödeme'}</span>
+                    <span className="text-xs text-charcoal-500">{formatTime(p.at)}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-bold tabular-nums text-olive-700">−{formatTL(p.amount)}</span>
+                    <button
+                      type="button"
+                      onClick={() => onRemovePayment(idx)}
+                      className="text-xs text-charcoal-400 transition-colors hover:text-terracotta-600"
+                      title="Ödemeyi geri al"
+                      aria-label="Ödemeyi geri al"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Ozet + odeme + islemler */}
+      <div className="space-y-3 border-t border-cream-200 bg-cream-50/80 p-4">
+        <div className="space-y-1.5 rounded-2xl bg-white/80 p-3 shadow-soft">
+          <Row label={`Ara Toplam (${itemCount} ürün)`} value={formatTL(subtotal)} />
+          {paid > 0 && <Row label="Ödenen" value={`−${formatTL(paid)}`} accent="olive" />}
+          <div className="my-1 h-px bg-cream-200" />
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm font-bold text-charcoal-700">Kalan Bakiye</span>
+            <span
+              className={`font-serif text-2xl font-extrabold tabular-nums ${
+                remaining > 0 ? 'text-terracotta-600' : 'text-olive-600'
+              }`}
+            >
+              {formatTL(remaining)}
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={submitPayment} className="rounded-2xl bg-white/80 p-3 shadow-soft">
+          {hasSelection ? (
+            <div className="mb-2 flex items-center justify-between rounded-xl bg-olive-50 px-3 py-2.5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-olive-700">
+                  Seçili {selectedUnits.size} adet
+                </p>
+                <p className="font-serif text-xl font-extrabold tabular-nums text-charcoal-800">
+                  {formatTL(selectedValue)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUnits(new Set())}
+                className="rounded-lg px-2 py-1 text-xs font-bold text-charcoal-500 transition-colors hover:text-terracotta-600"
+              >
+                Seçimi Temizle
+              </button>
+            </div>
+          ) : (
+            <div className="relative mb-2">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-bold text-charcoal-400">
+                ₺
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={manualAmount}
+                onChange={(e) => setManualAmount(e.target.value)}
+                placeholder="Serbest tutar (ör. 200)"
+                disabled={isEmpty || remaining <= 0}
+                className="w-full rounded-xl border border-cream-200 bg-white py-2.5 pl-7 pr-3 text-base font-bold tabular-nums text-charcoal-800 outline-none transition-all placeholder:font-normal placeholder:text-charcoal-400 focus:border-terracotta-400 focus:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canPay}
+            className="w-full rounded-xl bg-terracotta-500 py-2.5 text-sm font-extrabold text-cream-50 shadow-soft transition-all hover:bg-terracotta-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {amountToPay > 0 ? `${formatTL(amountToPay)} Tutar Düş` : 'Tutar Düş'}
+          </button>
+
+          <button
+            type="button"
+            onClick={payAll}
+            disabled={isEmpty || remaining <= 0}
+            className="mt-2 w-full rounded-xl border-2 border-olive-400 py-2 text-sm font-bold text-olive-700 transition-all hover:bg-olive-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Kalanı Tümüyle Öde ({formatTL(remaining)})
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={isEmpty}
+          className="w-full rounded-2xl bg-charcoal-800 py-3 text-sm font-extrabold uppercase tracking-wide text-cream-50 shadow-card transition-all hover:bg-charcoal-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Hesabı Kapat / Masayı Temizle
+        </button>
+      </div>
+
+      {confirmClear && (
+        <ConfirmClearModal
+          tableName={table.name}
+          remaining={remaining}
+          onCancel={() => setConfirmClear(false)}
+          onConfirm={confirmClearTable}
+        />
+      )}
+    </section>
+  )
+}
+
+/** Hesabi kapatma onay penceresi (native confirm yerine). */
+function ConfirmClearModal({ tableName, remaining, onCancel, onConfirm }) {
+  const unpaid = remaining > 0
+
+  // ESC ile kapat
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onCancel()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-900/50 p-4 backdrop-blur-sm"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl border border-cream-200 bg-white p-6 shadow-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-terracotta-50 text-2xl">
+            🧾
+          </span>
+          <h3 className="font-serif text-xl font-bold text-charcoal-800">Hesabı Kapat</h3>
+        </div>
+
+        <p className="text-sm leading-relaxed text-charcoal-600">
+          <strong className="text-charcoal-800">{tableName}</strong> hesabı kapatılıp masa
+          sıfırlanacak. Kayıt günün raporuna işlenir.
+        </p>
+
+        {unpaid && (
+          <div className="mt-3 rounded-2xl border border-terracotta-200 bg-terracotta-50 px-3 py-2.5 text-sm font-semibold text-terracotta-700">
+            ⚠️ Henüz ödenmemiş {formatTL(remaining)} var.
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-xl border-2 border-cream-200 py-2.5 text-sm font-bold text-charcoal-600 transition-all hover:bg-cream-100 active:scale-[0.98]"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            autoFocus
+            className="flex-1 rounded-xl bg-charcoal-800 py-2.5 text-sm font-extrabold text-cream-50 shadow-soft transition-all hover:bg-charcoal-900 active:scale-[0.98]"
+          >
+            Evet, Kapat
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, value, accent }) {
+  return (
+    <div className="flex items-baseline justify-between text-sm">
+      <span className="text-charcoal-600">{label}</span>
+      <span
+        className={`font-bold tabular-nums ${
+          accent === 'olive' ? 'text-olive-600' : 'text-charcoal-800'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
