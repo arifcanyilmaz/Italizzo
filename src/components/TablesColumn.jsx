@@ -2,7 +2,7 @@ import { TABLES } from '../data'
 import { formatTL } from '../lib/format'
 import { orderTotals, tableStatus } from '../lib/orders'
 
-const ZONES = ['Salon', 'Bahçe', 'VIP']
+const ZONES = ['Salon', 'Bahçe', 'VIP', 'Dış']
 
 const STATUS_STYLES = {
   empty: {

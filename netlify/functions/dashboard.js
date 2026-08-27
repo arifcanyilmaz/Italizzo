@@ -13,7 +13,7 @@
 // -----------------------------------------------------------------------------
 
 import { getDb } from './utils/mongo.js'
-import { businessDate, prettyDate } from './utils/date.js'
+import { businessDate, prettyDate, trHour } from './utils/date.js'
 
 // Icecek kategorileri (menu.js VALID_CATEGORIES ile uyumlu)
 const DRINK_CATEGORIES = new Set(['soguk', 'sicak'])
@@ -50,6 +50,7 @@ export const handler = async (event) => {
     const dailyMap = new Map()
     const productMap = new Map()
     const drinkMap = new Map()
+    const hourly = Array.from({ length: 24 }, (_, h) => ({ hour: h, revenue: 0, count: 0 }))
     let totalRevenue = 0
     let totalCollected = 0
     let totalItemCount = 0
@@ -62,6 +63,13 @@ export const handler = async (event) => {
 
       totalRevenue += subtotal
       totalCollected += paid
+
+      // Saatlik yogunluk (kapanis saatine gore)
+      const h = trHour(o.closedAt)
+      if (h != null) {
+        hourly[h].revenue += subtotal
+        hourly[h].count += 1
+      }
 
       const d = dailyMap.get(o.businessDate) || { revenue: 0, collected: 0, closedCount: 0 }
       d.revenue += subtotal
@@ -98,6 +106,7 @@ export const handler = async (event) => {
         itemCount: totalItemCount,
       },
       daily,
+      hourly,
       topProducts: rank(productMap).slice(0, 20),
       topDrinks: rank(drinkMap).slice(0, 20),
     })

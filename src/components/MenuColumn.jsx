@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CATEGORIES, groupByCategory } from '../data'
 import { formatTL, parseAmount } from '../lib/format'
+import ConfirmModal from './ConfirmModal'
 
 const DEFAULT_CAT = CATEGORIES.find((c) => c.id === 'pizza')?.id || CATEGORIES[0].id
 
@@ -23,6 +24,7 @@ export default function MenuColumn({
   const [activeCat, setActiveCat] = useState(DEFAULT_CAT)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null) // silinecek urun
 
   const grouped = useMemo(() => groupByCategory(menu), [menu])
   const items = grouped[activeCat] || []
@@ -130,11 +132,7 @@ export default function MenuColumn({
                   {/* Sil — küçük, hover'da görünür */}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`"${item.name}" menüden silinsin mi?`)) {
-                        onDeleteMenuItem(item.id)
-                      }
-                    }}
+                    onClick={() => setPendingDelete(item)}
                     className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] text-charcoal-400 opacity-0 shadow-soft transition-all hover:bg-terracotta-50 hover:text-terracotta-600 group-hover:opacity-100"
                     title="Menüden sil"
                     aria-label={`${item.name} sil`}
@@ -169,6 +167,22 @@ export default function MenuColumn({
           </ul>
         )}
       </div>
+
+      {pendingDelete && (
+        <ConfirmModal
+          icon="🗑️"
+          title="Ürünü Sil"
+          message={`"${pendingDelete.name}" menüden kalıcı olarak silinecek.`}
+          confirmLabel="Sil"
+          cancelLabel="Vazgeç"
+          tone="danger"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            onDeleteMenuItem(pendingDelete.id)
+            setPendingDelete(null)
+          }}
+        />
+      )}
     </section>
   )
 }

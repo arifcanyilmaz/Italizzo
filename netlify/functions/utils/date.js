@@ -22,6 +22,13 @@ export function prettyDate(dateStr) {
   }
 }
 
+/** Zaman damgasının Türkiye saatine göre saatini (0-23) döndürür. */
+export function trHour(ts) {
+  const t = new Date(ts).getTime()
+  if (!Number.isFinite(t)) return null
+  return new Date(t + TR_OFFSET_MS).getUTCHours()
+}
+
 /** Zaman damgasını Türkiye saatiyle 'HH:MM' gösterir. */
 export function trTime(ts) {
   try {

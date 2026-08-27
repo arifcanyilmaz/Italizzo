@@ -100,6 +100,9 @@ export default function Dashboard({ onBack }) {
               <StatCard label="Satılan Ürün" value={totals.itemCount} />
             </div>
 
+            {/* Saatlik yogunluk */}
+            <HourlyPanel hourly={data.hourly || []} />
+
             {/* Gun gun ciro */}
             <Panel title="Gün Gün Ciro" icon="📅">
               <ul className="space-y-2">
@@ -131,6 +134,48 @@ export default function Dashboard({ onBack }) {
         )}
       </main>
     </div>
+  )
+}
+
+function HourlyPanel({ hourly }) {
+  const max = Math.max(1, ...hourly.map((h) => h.revenue))
+  // Yalnizca satis olan saat araligini goster (ilk..son dolu saat)
+  const active = hourly.filter((h) => h.revenue > 0)
+  if (active.length === 0) {
+    return (
+      <Panel title="Saatlik Yoğunluk" icon="⏰">
+        <p className="py-4 text-center text-sm text-charcoal-500">Bu dönemde satış yok.</p>
+      </Panel>
+    )
+  }
+  const first = active[0].hour
+  const last = active[active.length - 1].hour
+  const range = hourly.slice(first, last + 1)
+  const peak = active.reduce((a, b) => (b.revenue > a.revenue ? b : a))
+
+  return (
+    <Panel title="Saatlik Yoğunluk" icon="⏰">
+      <p className="mb-3 text-xs text-charcoal-600">
+        En yoğun saat: <strong className="text-terracotta-600">{String(peak.hour).padStart(2, '0')}:00</strong>{' '}
+        · {formatTL(peak.revenue)}
+      </p>
+      <div className="flex items-end gap-1 overflow-x-auto pb-1" style={{ minHeight: '96px' }}>
+        {range.map((h) => (
+          <div key={h.hour} className="flex min-w-[22px] flex-1 flex-col items-center gap-1">
+            <div className="flex h-20 w-full items-end">
+              <div
+                className={`w-full rounded-t ${h.hour === peak.hour ? 'bg-terracotta-500' : 'bg-terracotta-300'}`}
+                style={{ height: `${Math.max(4, (h.revenue / max) * 100)}%` }}
+                title={`${String(h.hour).padStart(2, '0')}:00 · ${formatTL(h.revenue)} · ${h.count} hesap`}
+              />
+            </div>
+            <span className="text-[9px] font-bold tabular-nums text-charcoal-500">
+              {String(h.hour).padStart(2, '0')}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Panel>
   )
 }
 

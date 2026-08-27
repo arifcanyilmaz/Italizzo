@@ -18,6 +18,8 @@ import TablesColumn from './components/TablesColumn'
 import BillColumn from './components/BillColumn'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
+import ConfirmModal from './components/ConfirmModal'
+import Toast from './components/Toast'
 
 const STORAGE_ORDERS = 'italizzo.orders.v1'
 const STORAGE_ACTIVE = 'italizzo.activeTable.v1'
@@ -35,7 +37,18 @@ export default function App() {
   const [menuLoading, setMenuLoading] = useState(true)
   const [menuSource, setMenuSource] = useState('local')
 
+  // Bildirimler (native alert/confirm yerine)
+  const [toast, setToast] = useState(null) // { message, tone }
+  const [confirmLogout, setConfirmLogout] = useState(false)
+
   const saveTimers = useRef({})
+  const toastTimer = useRef()
+
+  const showToast = (message, tone = 'error') => {
+    clearTimeout(toastTimer.current)
+    setToast({ message, tone })
+    toastTimer.current = setTimeout(() => setToast(null), 3500)
+  }
 
   const activeTable = useMemo(
     () => TABLES.find((t) => t.id === activeTableId) || TABLES[0],
@@ -252,7 +265,7 @@ export default function App() {
       setMenu((prev) => prev.map((m) => (m.id === id ? updated : m)))
     } catch (err) {
       setMenu(snapshot)
-      window.alert(`Ürün güncellenemedi: ${err.message}`)
+      showToast(`Ürün güncellenemedi: ${err.message}`)
     }
   }
 
@@ -265,13 +278,11 @@ export default function App() {
       await deleteMenuItem(id)
     } catch (err) {
       setMenu(snapshot)
-      window.alert(`Ürün silinemedi: ${err.message}`)
+      showToast(`Ürün silinemedi: ${err.message}`)
     }
   }
 
-  const handleLogout = () => {
-    if (window.confirm('Çıkış yapılsın mı?')) setAuth(null)
-  }
+  const handleLogout = () => setConfirmLogout(true)
 
   // --- Giris yapilmadiysa login ekrani ---
   if (!auth) return <Login onLogin={setAuth} />
@@ -347,6 +358,24 @@ export default function App() {
           {mobileView === 'bill' && billEl}
         </div>
       </main>
+
+      {confirmLogout && (
+        <ConfirmModal
+          icon="⎋"
+          title="Çıkış Yap"
+          message="Oturumu kapatmak istediğinize emin misiniz?"
+          confirmLabel="Çıkış Yap"
+          cancelLabel="Vazgeç"
+          tone="dark"
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={() => {
+            setConfirmLogout(false)
+            setAuth(null)
+          }}
+        />
+      )}
+
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   )
 }

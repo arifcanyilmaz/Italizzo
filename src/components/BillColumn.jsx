@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatTL, formatTime, parseAmount } from '../lib/format'
 import { orderTotals } from '../lib/orders'
+import ConfirmModal from './ConfirmModal'
 
 const PAYMENT_LABEL = { item: 'Ürün ödemesi', manual: 'Serbest ödeme', all: 'Tümü ödendi' }
 
@@ -463,76 +464,19 @@ export default function BillColumn({
       </div>
 
       {confirmClear && (
-        <ConfirmClearModal
-          tableName={table.name}
-          remaining={remaining}
+        <ConfirmModal
+          icon="🧾"
+          title="Hesabı Kapat"
+          message={`${table.name} hesabı kapatılıp masa sıfırlanacak. Kayıt günün raporuna işlenir.`}
+          warning={remaining > 0 ? `Henüz ödenmemiş ${formatTL(remaining)} var.` : null}
+          confirmLabel="Evet, Kapat"
+          cancelLabel="Vazgeç"
+          tone="dark"
           onCancel={() => setConfirmClear(false)}
           onConfirm={confirmClearTable}
         />
       )}
     </section>
-  )
-}
-
-/** Hesabi kapatma onay penceresi (native confirm yerine). */
-function ConfirmClearModal({ tableName, remaining, onCancel, onConfirm }) {
-  const unpaid = remaining > 0
-
-  // ESC ile kapat
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onCancel()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-900/50 p-4 backdrop-blur-sm"
-      onClick={onCancel}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full max-w-sm rounded-3xl border border-cream-200 bg-white p-6 shadow-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-terracotta-50 text-2xl">
-            🧾
-          </span>
-          <h3 className="font-serif text-xl font-bold text-charcoal-800">Hesabı Kapat</h3>
-        </div>
-
-        <p className="text-sm leading-relaxed text-charcoal-600">
-          <strong className="text-charcoal-800">{tableName}</strong> hesabı kapatılıp masa
-          sıfırlanacak. Kayıt günün raporuna işlenir.
-        </p>
-
-        {unpaid && (
-          <div className="mt-3 rounded-2xl border border-terracotta-200 bg-terracotta-50 px-3 py-2.5 text-sm font-semibold text-terracotta-700">
-            ⚠️ Henüz ödenmemiş {formatTL(remaining)} var.
-          </div>
-        )}
-
-        <div className="mt-5 flex gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 rounded-xl border-2 border-cream-200 py-2.5 text-sm font-bold text-charcoal-600 transition-all hover:bg-cream-100 active:scale-[0.98]"
-          >
-            Vazgeç
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            autoFocus
-            className="flex-1 rounded-xl bg-charcoal-800 py-2.5 text-sm font-extrabold text-cream-50 shadow-soft transition-all hover:bg-charcoal-900 active:scale-[0.98]"
-          >
-            Evet, Kapat
-          </button>
-        </div>
-      </div>
-    </div>
   )
 }
 

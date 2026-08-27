@@ -23,6 +23,7 @@ export const TABLES = [
   { id: 't-04', name: 'Masa 04', zone: 'Salon' },
   { id: 't-05', name: 'Masa 05', zone: 'Salon' },
   { id: 't-06', name: 'Masa 06', zone: 'Salon' },
+  { id: 't-dis-01', name: 'Dış 01', zone: 'Dış' },
 ]
 
 /** Verilen menu dizisini { kategoriId: [urunler] } seklinde gruplar */
