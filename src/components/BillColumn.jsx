@@ -4,6 +4,92 @@ import { orderTotals } from '../lib/orders'
 
 const PAYMENT_LABEL = { item: 'Ürün ödemesi', manual: 'Serbest ödeme', all: 'Tümü ödendi' }
 
+const esc = (s) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+/**
+ * Adisyonun yazdirilabilir fisini yeni pencerede acar ve yazdirma ekranini getirir
+ * (Ctrl+P gibi). Termal fis gorunumu (~76mm, monospace).
+ */
+function openReceiptPrint({ table, items, payments, subtotal, paid, remaining, itemCount }) {
+  const now = new Date().toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  const itemRows = items
+    .map(
+      (i) => `
+      <tr>
+        <td class="q">${i.qty}×</td>
+        <td class="n">${esc(i.name)}</td>
+        <td class="a">${formatTL(i.price * i.qty)}</td>
+      </tr>`,
+    )
+    .join('')
+
+  const paymentRows = payments.length
+    ? `<div class="sec">ALINAN ÖDEMELER</div>` +
+      payments
+        .map(
+          (p) => `
+      <div class="pay">
+        <span>${PAYMENT_LABEL[p.type] || 'Ödeme'} · ${formatTime(p.at)}</span>
+        <span>−${formatTL(p.amount)}</span>
+      </div>`,
+        )
+        .join('')
+    : ''
+
+  const html = `<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Adisyon · ${esc(table.name)}</title>
+<style>
+  @page { size: 80mm auto; margin: 4mm; }
+  * { box-sizing: border-box; }
+  body { width: 72mm; margin: 0 auto; font-family: 'Courier New', monospace; color: #000; font-size: 12px; }
+  h1 { text-align: center; font-size: 20px; margin: 0; letter-spacing: 1px; }
+  .sub { text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin: 2px 0 8px; }
+  .meta { display: flex; justify-content: space-between; font-size: 11px; margin: 2px 0; }
+  .dash { border-top: 1px dashed #000; margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 2px 0; vertical-align: top; }
+  td.q { width: 26px; }
+  td.n { padding-right: 6px; }
+  td.a { text-align: right; white-space: nowrap; }
+  .tot { display: flex; justify-content: space-between; margin: 2px 0; }
+  .tot.big { font-size: 15px; font-weight: bold; }
+  .sec { font-size: 10px; letter-spacing: 1px; margin: 6px 0 2px; }
+  .pay { display: flex; justify-content: space-between; font-size: 11px; }
+  .foot { text-align: center; margin-top: 10px; font-size: 11px; }
+</style></head>
+<body>
+  <h1>ITALIZZO</h1>
+  <div class="sub">Pizzeria · Trattoria</div>
+  <div class="meta"><span>${esc(table.name)}${table.zone ? ' · ' + esc(table.zone) : ''}</span><span>${now}</span></div>
+  <div class="dash"></div>
+  <table>${itemRows}</table>
+  <div class="dash"></div>
+  <div class="tot"><span>Ara Toplam (${itemCount} ürün)</span><span>${formatTL(subtotal)}</span></div>
+  ${paid > 0 ? `<div class="tot"><span>Ödenen</span><span>−${formatTL(paid)}</span></div>` : ''}
+  <div class="tot big"><span>${remaining > 0 ? 'KALAN' : 'ÖDENDİ'}</span><span>${formatTL(remaining)}</span></div>
+  ${paymentRows}
+  <div class="dash"></div>
+  <div class="foot">Afiyet olsun! · Teşekkür ederiz</div>
+  <script>window.onload = function(){ window.print(); }; window.onafterprint = function(){ window.close(); };</script>
+</body></html>`
+
+  const w = window.open('', 'ITALIZZO_RECEIPT', 'width=380,height=640')
+  if (!w) return false
+  w.document.open()
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  return true
+}
+
 
 export default function BillColumn({
   table,
@@ -118,6 +204,11 @@ export default function BillColumn({
     setManualAmount('')
     setConfirmClear(false)
     onClearTable()
+  }
+
+  const handlePrint = () => {
+    if (isEmpty) return
+    openReceiptPrint({ table, items, payments, subtotal, paid, remaining, itemCount })
   }
 
   // Urunleri birim birim satirlara ac
@@ -351,6 +442,15 @@ export default function BillColumn({
             Kalanı Tümüyle Öde ({formatTL(remaining)})
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={isEmpty}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-charcoal-300 bg-white py-3 text-sm font-extrabold uppercase tracking-wide text-charcoal-700 shadow-soft transition-all hover:bg-cream-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="text-base">🖨️</span> Çıktı Al
+        </button>
 
         <button
           type="button"
