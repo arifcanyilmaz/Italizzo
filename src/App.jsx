@@ -18,6 +18,7 @@ import TablesColumn from './components/TablesColumn'
 import BillColumn from './components/BillColumn'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
+import GelirGider from './components/GelirGider'
 import ConfirmModal from './components/ConfirmModal'
 import Toast from './components/Toast'
 
@@ -30,7 +31,7 @@ export default function App() {
   const [orders, setOrders] = useLocalStorage(STORAGE_ORDERS, {})
   const [activeTableId, setActiveTableId] = useLocalStorage(STORAGE_ACTIVE, TABLES[0].id)
   const [mobileView, setMobileView] = useState('tables')
-  const [view, setView] = useState('pos') // 'pos' | 'dashboard'
+  const [view, setView] = useState('pos') // 'pos' | 'dashboard' | 'finance'
 
   // Menu MongoDB'den yuklenir (backend yoksa yedege duser)
   const [menu, setMenu] = useState([])
@@ -290,6 +291,9 @@ export default function App() {
   // --- Satis panosu (tam sayfa) ---
   if (view === 'dashboard') return <Dashboard onBack={() => setView('pos')} />
 
+  // --- Gelir/Gider defteri (tam sayfa) ---
+  if (view === 'finance') return <GelirGider onBack={() => setView('pos')} />
+
   const menuEl = (
     <MenuColumn
       menu={menu}
@@ -322,6 +326,7 @@ export default function App() {
         openTables={openTables}
         onLogout={handleLogout}
         onOpenDashboard={() => setView('dashboard')}
+        onOpenFinance={() => setView('finance')}
       />
 
       {/* Mobil/tablet panel gecis kontrolu */}

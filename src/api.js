@@ -104,6 +104,35 @@ export async function fetchDashboard(days = 30) {
   }
 }
 
+// --------------------------------------------------------------- Finance ----
+
+/** Bir ayin gelir/gider kayitlarini getirir. Backend yoksa { ok:false }. */
+export async function fetchFinance(year, month) {
+  try {
+    const res = await fetch(`/api/finance?year=${year}&month=${month}`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return { ok: true, entries: await res.json() }
+  } catch (err) {
+    return { ok: false, error: err.message }
+  }
+}
+
+/** Bir gunun gelir/gider kaydini kaydeder (upsert). */
+export async function saveFinanceDay(entry) {
+  const res = await fetch('/api/finance', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Kayıt başarısız')
+  }
+  return res.json().catch(() => ({}))
+}
+
 // ----------------------------------------------------------------- Login ----
 
 /**
