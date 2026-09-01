@@ -207,7 +207,7 @@ export default function GelirGider({ onBack }) {
       </header>
 
       <main className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="mx-auto max-w-5xl space-y-5">
+        <div className="mx-auto w-full max-w-[1600px] space-y-5">
           {/* Ozet kutulari */}
           <div className="grid grid-cols-3 gap-3">
             <SummaryBox label="Gelir Toplamı" value={totalGelir} tone="olive" />
@@ -229,11 +229,11 @@ export default function GelirGider({ onBack }) {
                   <thead className="sticky top-0 bg-charcoal-800 text-cream-50">
                     <tr>
                       <Th className="w-28">Tarih</Th>
-                      <Th className="min-w-[180px] text-left">Gider Açıklama</Th>
-                      <Th className="min-w-[180px] text-left">Gelir Açıklama</Th>
-                      <Th className="w-28">Gelir</Th>
-                      <Th className="w-28">Gider</Th>
-                      <Th className="w-32">Toplam</Th>
+                      <Th className="min-w-[320px] text-left">Gider Açıklama</Th>
+                      <Th className="min-w-[320px] text-left">Gelir Açıklama</Th>
+                      <Th className="w-32">Gelir</Th>
+                      <Th className="w-32">Gider</Th>
+                      <Th className="w-36">Toplam</Th>
                     </tr>
                   </thead>
                   <tbody>
