@@ -20,7 +20,11 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import GelirGider from './components/GelirGider'
 import ConfirmModal from './components/ConfirmModal'
+import PasswordModal from './components/PasswordModal'
 import Toast from './components/Toast'
+
+// Gelir/Gider sayfasi icin basit sifre (JWT/oturum degil; her girişte sorulur)
+const FINANCE_PASSWORD = '1234Aa!'
 
 const STORAGE_ORDERS = 'italizzo.orders.v1'
 const STORAGE_ACTIVE = 'italizzo.activeTable.v1'
@@ -41,6 +45,7 @@ export default function App() {
   // Bildirimler (native alert/confirm yerine)
   const [toast, setToast] = useState(null) // { message, tone }
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [askFinancePw, setAskFinancePw] = useState(false) // Gelir/Gider sifre kapisi
 
   const saveTimers = useRef({})
   const toastTimer = useRef()
@@ -326,7 +331,7 @@ export default function App() {
         openTables={openTables}
         onLogout={handleLogout}
         onOpenDashboard={() => setView('dashboard')}
-        onOpenFinance={() => setView('finance')}
+        onOpenFinance={() => setAskFinancePw(true)}
       />
 
       {/* Mobil/tablet panel gecis kontrolu */}
@@ -376,6 +381,18 @@ export default function App() {
           onConfirm={() => {
             setConfirmLogout(false)
             setAuth(null)
+          }}
+        />
+      )}
+
+      {askFinancePw && (
+        <PasswordModal
+          title="Gelir Gider — Şifre"
+          expected={FINANCE_PASSWORD}
+          onCancel={() => setAskFinancePw(false)}
+          onSuccess={() => {
+            setAskFinancePw(false)
+            setView('finance')
           }}
         />
       )}
